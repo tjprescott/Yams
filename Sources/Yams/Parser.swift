@@ -272,13 +272,28 @@ private extension Parser {
     func loadDocument() throws -> Node {
         let node = try loadNode(from: parse())
         try parse() // Drop YAML_DOCUMENT_END_EVENT
+        // FIXME: Copy-constructor for the Node to replace references
         return node
     }
 
     func loadNode(from event: Event) throws -> Node {
         switch event.type {
         case YAML_ALIAS_EVENT:
-            return try loadAlias(from: event)
+            do {
+                return try loadAlias(from: event)
+            } catch let error {
+                switch error {
+                case let YamlError.composer(_, problem, _, _):
+                    if problem == "found undefined alias" {
+                        guard let alias = event.aliasAnchor else { fatalError("Expected alias but did not find one.") }
+                        guard let yamlError = error as? YamlError else { fatalError("Unreachable") }
+                        return Node(unresolved: alias, error: yamlError)
+                    }
+                default:
+                    break
+                }
+                throw error
+            }
         case YAML_SCALAR_EVENT:
             return try loadScalar(from: event)
         case YAML_SEQUENCE_START_EVENT:
@@ -286,7 +301,7 @@ private extension Parser {
         case YAML_MAPPING_START_EVENT:
             return try loadMapping(from: event)
         default:
-            fatalError("unreachable")
+            fatalError("unreachable event #\(event.type.rawValue)")
         }
     }
 
@@ -313,7 +328,12 @@ private extension Parser {
         guard let alias = event.aliasAnchor else {
             fatalError("unreachable")
         }
+        if alias == "ref_9" && anchors.count == 107 {
+            let anCount = anchors.count
+            let test = "best"
+        }
         guard let node = anchors[alias] else {
+            print("UNRESOLVED ALIAS \(alias)")
             throw YamlError.composer(context: nil,
                                      problem: "found undefined alias", event.startMark,
                                      yaml: yaml)

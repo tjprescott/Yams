@@ -114,6 +114,8 @@ private struct _Decoder: Decoder {
             throw _typeMismatch(at: codingPath, expectation: Node.Scalar.self, reality: mapping)
         case .sequence(let sequence):
             throw _typeMismatch(at: codingPath, expectation: Node.Scalar.self, reality: sequence)
+        case .unresolved(let unresolved):
+            throw _typeMismatch(at: codingPath, expectation: Node.Scalar.self, reality: unresolved)
         }
     }
 }

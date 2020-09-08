@@ -54,6 +54,8 @@ public final class Constructor {
                 return result
             }
             return [Any].construct_seq(from: sequence)
+        case .unresolved:
+            fatalError("Unable to get Swift value from unresolved node type.")
         }
     }
 

@@ -16,6 +16,8 @@ public enum Node: Hashable {
     case mapping(Mapping)
     /// Sequence node.
     case sequence(Sequence)
+    /// Unresolved node.
+    case unresolved(Unresolved)
 }
 
 extension Node {
@@ -45,6 +47,15 @@ extension Node {
     public init(_ nodes: [Node], _ tag: Tag = .implicit, _ style: Sequence.Style = .any) {
         self = .sequence(.init(nodes, tag, style))
     }
+
+    /// Create a `Node.scalar` with a string, tag & scalar style.
+    ///
+    /// - parameter alias: Alias value for this node.
+    /// - parameter tag:    Tag for this node.
+    /// - parameter style:  Style to use when emitting this node.
+    public init(unresolved alias: String, error: YamlError, _ tag: Tag = .implicit, _ style: Unresolved.Style = .any) {
+        self = .unresolved(.init(alias: alias, error: error, tag, style))
+    }
 }
 
 // MARK: - Public Node Members
@@ -58,6 +69,7 @@ extension Node {
         case let .scalar(scalar): return scalar.resolvedTag
         case let .mapping(mapping): return mapping.resolvedTag
         case let .sequence(sequence): return sequence.resolvedTag
+        case let .unresolved(unresolved): return unresolved.resolvedTag
         }
     }
 
@@ -67,6 +79,16 @@ extension Node {
         case let .scalar(scalar): return scalar.mark
         case let .mapping(mapping): return mapping.mark
         case let .sequence(sequence): return sequence.mark
+        case let .unresolved(unresolved): return unresolved.mark
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case let .scalar(scalar): return "Scalar()"
+        case let .mapping(mapping): return "Mapping()"
+        case let .sequence(sequence): return "Sequence()"
+        case let .unresolved(unresolved): return "Unresolved()"
         }
     }
 
@@ -139,7 +161,7 @@ extension Node {
     public subscript(node: Node) -> Node? {
         get {
             switch self {
-            case .scalar: return nil
+            case .scalar, .unresolved: return nil
             case let .mapping(mapping):
                 return mapping[node]
             case let .sequence(sequence):
@@ -150,7 +172,7 @@ extension Node {
         set {
             guard let newValue = newValue else { return }
             switch self {
-            case .scalar: return
+            case .scalar, .unresolved: return
             case .mapping(var mapping):
                 mapping[node] = newValue
                 self = .mapping(mapping)
