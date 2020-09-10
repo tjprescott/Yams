@@ -58,6 +58,40 @@ extension Node {
     }
 }
 
+extension Node {
+
+    /// Returns a recursive copy of a `Node`, resolving any `Node.Unresolved` with the `Parser`.
+    public func resolvingAliases(withAnchors anchors: [String: Node]) throws -> Node {
+        switch self {
+        case let .mapping(mapping):
+            var map = [(Node, Node)]()
+            var iterator = mapping.makeIterator()
+            while true {
+                guard let (key, value) = iterator.next() else { break }
+                let valueNode = try value.resolvingAliases(withAnchors: anchors)
+                map.append((key, valueNode))
+            }
+            return .mapping(.init(map, mapping.tag, mapping.style, mapping.mark))
+        case let .scalar(scalar):
+            return .scalar(.init(scalar.string, scalar.tag, scalar.style, scalar.mark))
+        case let .sequence(sequence):
+            var nodes = [Node]()
+            var iterator = sequence.makeIterator()
+            while true {
+                guard let oldNode = iterator.next() else { break }
+                nodes.append(try oldNode.resolvingAliases(withAnchors: anchors))
+            }
+            return .sequence(.init(nodes, sequence.tag, sequence.style, sequence.mark))
+        case let .unresolved(unresolved):
+            if let resolved = anchors[unresolved.string] {
+                return resolved
+            } else {
+                throw unresolved.error
+            }
+        }
+    }
+}
+
 // MARK: - Public Node Members
 
 extension Node {
@@ -85,10 +119,10 @@ extension Node {
 
     public var description: String {
         switch self {
-        case let .scalar(scalar): return "Scalar()"
-        case let .mapping(mapping): return "Mapping()"
-        case let .sequence(sequence): return "Sequence()"
-        case let .unresolved(unresolved): return "Unresolved()"
+        case let .scalar(scalar): return "Scalar"
+        case let .mapping(mapping): return "Mapping"
+        case let .sequence(sequence): return "Sequence"
+        case let .unresolved(unresolved): return "Unresolved"
         }
     }
 

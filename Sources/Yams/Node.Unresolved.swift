@@ -51,7 +51,8 @@ extension Node {
         /// - parameter tag:    This scalar's `Tag`.
         /// - parameter style:  The style to use when emitting this `Scalar`.
         /// - parameter mark:   This scalar's `Mark`.
-        public init(alias: String, error: YamlError, _ tag: Tag = .implicit, _ style: Style = .any, _ mark: Mark? = nil) {
+        public init(alias: String, error: YamlError, _ tag: Tag = .implicit, _ style: Style = .any,
+                    _ mark: Mark? = nil) {
             self.string = alias
             self.error = error
             self.tag = tag

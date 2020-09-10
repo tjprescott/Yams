@@ -272,8 +272,7 @@ private extension Parser {
     func loadDocument() throws -> Node {
         let node = try loadNode(from: parse())
         try parse() // Drop YAML_DOCUMENT_END_EVENT
-        // FIXME: Copy-constructor for the Node to replace references
-        return node
+        return try node.resolvingAliases(withAnchors: self.anchors)
     }
 
     func loadNode(from event: Event) throws -> Node {
@@ -328,12 +327,7 @@ private extension Parser {
         guard let alias = event.aliasAnchor else {
             fatalError("unreachable")
         }
-        if alias == "ref_9" && anchors.count == 107 {
-            let anCount = anchors.count
-            let test = "best"
-        }
         guard let node = anchors[alias] else {
-            print("UNRESOLVED ALIAS \(alias)")
             throw YamlError.composer(context: nil,
                                      problem: "found undefined alias", event.startMark,
                                      yaml: yaml)
