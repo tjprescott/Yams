@@ -37,7 +37,7 @@ public final class Constructor {
     ///
     /// - returns: An `Any` Swift value, if one was produced by the Node type's relevant mapping on this
     ///            `Constructor`.
-    public func any(from node: Node) -> Any {
+    public func any(from node: Node) -> Any? {
         switch node {
         case .scalar(let scalar):
             if let method = scalarMap[node.tag.name], let result = method(scalar) {
@@ -55,7 +55,7 @@ public final class Constructor {
             }
             return [Any].construct_seq(from: sequence)
         case .unresolved:
-            fatalError("Unable to get Swift value from unresolved node type.")
+            return nil
         }
     }
 
@@ -417,7 +417,14 @@ private extension Dictionary {
         let mapping = mapping.flatten()
         // TODO: YAML supports keys other than str.
         return [AnyHashable: Any](
-            mapping.map { (String.construct(from: $0.key)!, mapping.tag.constructor.any(from: $0.value)) },
+            mapping.compactMap { item in
+                let key = String.construct(from: item.key)!
+                let value = mapping.tag.constructor.any(from: item.value)
+                guard let val = value else {
+                    return nil
+                }
+                return (key, val)
+            },
             uniquingKeysWith: { _, second in second }
         )
     }
