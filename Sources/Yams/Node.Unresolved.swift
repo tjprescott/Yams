@@ -30,18 +30,6 @@ extension Node {
         public enum Style: UInt32 {
             /// Let the emitter choose the style.
             case any = 0
-            /// The plain scalar style.
-            case plain
-
-            /// The single-quoted scalar style.
-            case singleQuoted
-            /// The double-quoted scalar style.
-            case doubleQuoted
-
-            /// The literal scalar style.
-            case literal
-            /// The folded scalar style.
-            case folded
         }
 
         /// Create a `Node.Unresolved` using the specified parameters.

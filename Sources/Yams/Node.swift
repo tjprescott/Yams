@@ -60,18 +60,53 @@ extension Node {
 
 extension Node {
 
+    public var unresolvedCount: Int {
+        var count = 0
+        switch self {
+        case let .mapping(mapping):
+            var iterator = mapping.makeIterator()
+            while true {
+                guard let (_, value) = iterator.next() else { break }
+                count += value.unresolvedCount
+            }
+        case let .sequence(sequence):
+            var iterator = sequence.makeIterator()
+            while true {
+                guard let item = iterator.next() else { break }
+                count += item.unresolvedCount
+            }
+        case .scalar:
+            break
+        case .unresolved:
+            count += 1
+        }
+        return count
+    }
+
     /// Returns a recursive copy of a `Node`, resolving any `Node.Unresolved` with the `Parser`.
     public func resolvingAliases(withAnchors anchors: [String: Node]) throws -> Node {
+        print("Resolving \(self.description)")
+        guard self.unresolvedCount > 0 else { return self }
         switch self {
         case let .mapping(mapping):
             var map = [(Node, Node)]()
             var iterator = mapping.makeIterator()
             while true {
                 guard let (key, value) = iterator.next() else { break }
-                let valueNode = try value.resolvingAliases(withAnchors: anchors)
-                map.append((key, valueNode))
+                let before = value.unresolvedCount
+                if before == 0 {
+                    map.append((key, value))
+                } else {
+                    print("\(value.description) unresolved count: \(before)")
+                    let resolved = try value.resolvingAliases(withAnchors: anchors)
+                    let after = resolved.unresolvedCount
+                    // FIXME: Anchors is polluting these with Unresolved Nodes
+                    // assert(after == 0, "\(after) unresolved aliases remain after resolution!")
+                    map.append((key, resolved))
+                }
             }
-            return .mapping(.init(map, mapping.tag, mapping.style, mapping.mark))
+            let node = Node.mapping(.init(map, mapping.tag, mapping.style, mapping.mark))
+            return node
         case let .scalar(scalar):
             return .scalar(.init(scalar.string, scalar.tag, scalar.style, scalar.mark))
         case let .sequence(sequence):
@@ -84,6 +119,9 @@ extension Node {
             return .sequence(.init(nodes, sequence.tag, sequence.style, sequence.mark))
         case let .unresolved(unresolved):
             if let resolved = anchors[unresolved.string] {
+                if case .unresolved = resolved {
+                    fatalError("Resolved Node cannot be Node.Unresolved.")
+                }
                 return resolved
             } else {
                 throw unresolved.error
@@ -119,10 +157,10 @@ extension Node {
 
     public var description: String {
         switch self {
-        case let .scalar(scalar): return "Scalar"
-        case let .mapping(mapping): return "Mapping"
-        case let .sequence(sequence): return "Sequence"
-        case let .unresolved(unresolved): return "Unresolved"
+        case let .scalar(scalar): return "[Scalar]: value = \(scalar.string)"
+        case let .mapping(mapping): return "[Mapping]: count = \(mapping.count)"
+        case let .sequence(sequence): return "[Sequence]: count = \(sequence.count)"
+        case let .unresolved(unresolved): return "[Unresolved]: alias = \(unresolved.string)"
         }
     }
 

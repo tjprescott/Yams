@@ -45,7 +45,8 @@ public func load(yaml: String,
                  _ resolver: Resolver = .default,
                  _ constructor: Constructor = .default,
                  _ encoding: Parser.Encoding = .default) throws -> Any? {
-    return try Parser(yaml: yaml, resolver: resolver, constructor: constructor, encoding: encoding).singleRoot()?.any
+    let node = try Parser(yaml: yaml, resolver: resolver, constructor: constructor, encoding: encoding).singleRoot()
+    return node?.any
 }
 
 /// Parse all YAML documents in a String
@@ -247,7 +248,15 @@ public final class Parser {
                 yaml: yaml
             )
         }
-        return node
+        // Resolve any unresolved references in anchors
+        anchors = try resolveAnchors()
+        let resolved = try node.resolvingAliases(withAnchors: self.anchors)
+        let after = resolved.unresolvedCount
+        assert(
+            after == 0,
+            "Unexpectedly found \(after) unresolved nodes after resolution."
+        )
+        return resolved
     }
 
     // MARK: - Private Members
@@ -261,6 +270,64 @@ public final class Parser {
         case utf16(Data)
     }
     private var buffer: Buffer
+
+    private func resolveAnchor(node: Node) throws -> Node {
+        switch node {
+        case let .mapping(mapping):
+            var map = [(Node, Node)]()
+            var iterator = mapping.makeIterator()
+            while true {
+                guard let (key, value) = iterator.next() else { break }
+                let before = value.unresolvedCount
+                if before == 0 {
+                    map.append((key, value))
+                } else {
+                    let resolved = try resolveAnchor(node: value)
+                    let after = resolved.unresolvedCount
+                    assert(after == 0, "\(after) unresolved aliases remain after resolution!")
+                    map.append((key, resolved))
+                }
+            }
+            let node = Node.mapping(.init(map, mapping.tag, mapping.style, mapping.mark))
+            return node
+        case let .scalar(scalar):
+            return .scalar(.init(scalar.string, scalar.tag, scalar.style, scalar.mark))
+        case let .sequence(sequence):
+            var nodes = [Node]()
+            var iterator = sequence.makeIterator()
+            while true {
+                guard let oldNode = iterator.next() else { break }
+                nodes.append(try resolveAnchor(node: oldNode))
+            }
+            return .sequence(.init(nodes, sequence.tag, sequence.style, sequence.mark))
+        case let .unresolved(unresolved):
+            print("Node \(node.description) has unresolved reference to \(unresolved.string)")
+            if let resolved = anchors[unresolved.string] {
+                if case .unresolved = resolved {
+                    fatalError("Resolved Node cannot be Node.Unresolved.")
+                }
+                return resolved
+            } else {
+                throw unresolved.error
+            }
+        }
+    }
+
+    private func resolveAnchors() throws -> [String: Node] {
+        var resolvedAnchors = [String: Node]()
+        try anchors.forEach { key, node in
+            // anchors with no unresolved children can be copied directly
+            guard node.unresolvedCount > 0 else {
+                resolvedAnchors[key] = node
+                return
+            }
+            resolvedAnchors[key] = try resolveAnchor(node: node)
+        }
+        resolvedAnchors.forEach { key, node in
+            assert(node.unresolvedCount == 0, "Unexpectedly found unresolved nodes for \(key) after resolution.")
+        }
+        return resolvedAnchors
+    }
 }
 
 // MARK: Implementation Details
@@ -272,7 +339,7 @@ private extension Parser {
     func loadDocument() throws -> Node {
         let node = try loadNode(from: parse())
         try parse() // Drop YAML_DOCUMENT_END_EVENT
-        return try node.resolvingAliases(withAnchors: self.anchors)
+        return node
     }
 
     func loadNode(from event: Event) throws -> Node {
