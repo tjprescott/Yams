@@ -119,10 +119,10 @@ extension Node {
 
     public var description: String {
         switch self {
-        case let .scalar(scalar): return "Scalar"
-        case let .mapping(mapping): return "Mapping"
-        case let .sequence(sequence): return "Sequence"
-        case let .unresolved(unresolved): return "Unresolved"
+        case .scalar: return "Scalar"
+        case .mapping: return "Mapping"
+        case .sequence: return "Sequence"
+        case .unresolved: return "Unresolved"
         }
     }
 
@@ -130,7 +130,7 @@ extension Node {
 
     /// This node as an `Any`, if convertible.
     public var any: Any {
-        return tag.constructor.any(from: self)
+        return tag.constructor.any(from: self) as Any
     }
 
     /// This node as a `String`, if convertible.

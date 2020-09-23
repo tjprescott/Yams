@@ -285,6 +285,7 @@ class EncoderTests: XCTestCase { // swiftlint:disable:this type_body_length
         expectEqual(type(of: decoded), Employee.self, "Expected decoded value to be of type Employee; got \(type(of: decoded)) instead.")
     }
 
+    // swiftlint:disable nesting
     func testDecodingAnchors() throws {
         struct AnchorSample: Decodable {
             struct Host: Decodable {

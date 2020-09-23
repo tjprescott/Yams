@@ -6,6 +6,8 @@
 //  Copyright (c) 2016 Yams. All rights reserved.
 //
 
+// swiftlint:disable file_length
+
 #if SWIFT_PACKAGE
 import CYaml
 #endif
@@ -275,6 +277,7 @@ private extension Parser {
         return try node.resolvingAliases(withAnchors: self.anchors)
     }
 
+    // swiftlint:disable cyclomatic_complexity
     func loadNode(from event: Event) throws -> Node {
         switch event.type {
         case YAML_ALIAS_EVENT:

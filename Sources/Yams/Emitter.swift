@@ -406,7 +406,7 @@ extension Emitter {
         case .scalar(let scalar): try serializeScalar(scalar)
         case .sequence(let sequence): try serializeSequence(sequence)
         case .mapping(let mapping): try serializeMapping(mapping)
-        case .unresolved(let unresolved): fatalError("Cannot serialize unresolved node.")
+        case .unresolved: fatalError("Cannot serialize unresolved node.")
         }
     }
 

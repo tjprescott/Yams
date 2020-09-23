@@ -466,7 +466,7 @@ extension Array {
         return sequence.compactMap { subnode -> (Any, Any)? in
             // TODO: Should raise error if subnode is not mapping or mapping.count != 1
             guard let (key, value) = subnode.mapping?.first else { return nil }
-            return (sequence.tag.constructor.any(from: key), sequence.tag.constructor.any(from: value))
+            return (sequence.tag.constructor.any(from: key) as Any, sequence.tag.constructor.any(from: value) as Any)
         }
     }
 
@@ -480,7 +480,7 @@ extension Array {
         return sequence.compactMap { subnode -> (Any, Any)? in
             // TODO: Should raise error if subnode is not mapping or mapping.count != 1
             guard let (key, value) = subnode.mapping?.first else { return nil }
-            return (sequence.tag.constructor.any(from: key), sequence.tag.constructor.any(from: value))
+            return (sequence.tag.constructor.any(from: key) as Any, sequence.tag.constructor.any(from: value) as Any)
         }
     }
 }
