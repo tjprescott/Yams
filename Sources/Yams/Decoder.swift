@@ -83,10 +83,15 @@ private struct _Decoder: Decoder {
     let userInfo: [CodingUserInfoKey: Any]
 
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard let mapping = node.mapping?.flatten() else {
-            throw _typeMismatch(at: codingPath, expectation: Node.Mapping.self, reality: node)
+
+        if let mapping = node.mapping?.flatten() {
+            return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: mapping))
         }
-        return .init(_KeyedDecodingContainer<Key>(decoder: self, wrapping: mapping))
+        if let unresolved = node.unresolved {
+            throw _typeMismatch(at: codingPath, expectation: Node.Mapping.self, reality: unresolved)
+        }
+        throw _typeMismatch(at: codingPath, expectation: Node.Mapping.self, reality: node)
+
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
